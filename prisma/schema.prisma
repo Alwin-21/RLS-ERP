@@ -1,0 +1,202 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  id              String    @id @default(uuid())
+  teacherCode     String    @unique @map("teacher_code")
+  fullName        String    @map("full_name")
+  email           String    @unique
+  phone           String
+  qualification   String
+  designation     String
+  assignedSubject String    @map("assigned_subject")
+  classTeacherFor String?   @map("class_teacher_for")
+  basicSalary     Float     @default(35000) @map("basic_salary")
+  pfDeduction     Float     @default(4200)  @map("pf_deduction")
+  allowances      Float     @default(5000)
+  joiningDate     DateTime  @map("joining_date")
+  isActive        Boolean   @default(true)  @map("is_active")
+  createdAt       DateTime  @default(now())  @map("created_at")
+
+  attendance      StaffAttendance[]
+  leaveRequests   LeaveRequest[]
+  timetables      Timetable[]
+
+  @@map("teachers")
+}
+
+model StaffAttendance {
+  id             String   @id @default(uuid())
+  teacherId      String   @map("teacher_id")
+  attendanceDate DateTime @map("attendance_date")
+  status         String   @default("present") // present | absent | late | on_leave
+  checkInTime    String?  @map("check_in_time")
+  notes          String?
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, attendanceDate])
+  @@map("staff_attendance")
+}
+
+model LeaveRequest {
+  id          String   @id @default(uuid())
+  teacherId   String   @map("teacher_id")
+  teacherName String   @map("teacher_name")
+  leaveType   String   @map("leave_type") // medical | casual | maternity | special
+  startDate   DateTime @map("start_date")
+  endDate     DateTime @map("end_date")
+  totalDays   Int      @map("total_days")
+  reason      String
+  status      String   @default("pending") // pending | approved | rejected
+  approvedBy  String?  @map("approved_by")
+  reviewNotes String?  @map("review_notes")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@map("leave_requests")
+}
+
+model Student {
+  id          String   @id @default(uuid())
+  rollNo      String   @unique @map("roll_no")
+  fullName    String   @map("full_name")
+  standard    String
+  division    String
+  gender      String
+  dob         DateTime
+  parentName  String   @map("parent_name")
+  parentPhone String   @map("parent_phone")
+  address     String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  marks       MarkRegister[]
+  libraryBooks LibraryRecord[]
+
+  @@map("students")
+}
+
+model MarkRegister {
+  id            String   @id @default(uuid())
+  studentId     String   @map("student_id")
+  subjectName   String   @map("subject_name")
+  examType      String   @map("exam_type") // Slip Test 1 | Slip Test 2 | Mid-Term Exam | Annual Exam
+  marksObtained Float    @map("marks_obtained")
+  maxMarks      Float    @default(100) @map("max_marks")
+  examDate      DateTime @map("exam_date")
+  remarks       String?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("mark_registers")
+}
+
+model Timetable {
+  id           String @id @default(uuid())
+  standard     String
+  division     String
+  dayOfWeek    String @map("day_of_week")
+  periodNumber Int    @map("period_number")
+  subjectName  String @map("subject_name")
+  teacherId    String? @map("teacher_id")
+  roomNo       String? @default("Main Hall") @map("room_no")
+
+  teacher Teacher? @relation(fields: [teacherId], references: [id], onDelete: SetNull)
+
+  @@map("timetables")
+}
+
+model SyllabusUpload {
+  id                String   @id @default(uuid())
+  standard          String
+  subjectName       String   @map("subject_name")
+  academicYear      String   @default("2025-2026") @map("academic_year")
+  term              String
+  title             String
+  fileUrl           String?  @map("file_url")
+  completedChapters Int      @default(0) @map("completed_chapters")
+  totalChapters     Int      @default(10) @map("total_chapters")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("syllabus_uploads")
+}
+
+model LibraryRecord {
+  id                String    @id @default(uuid())
+  accessionNo       String    @unique @map("accession_no")
+  bookTitle         String    @map("book_title")
+  author            String
+  category          String
+  status            String    @default("available") // available | issued | lost
+  borrowerStudentId String?   @map("borrower_student_id")
+  issueDate         DateTime? @map("issue_date")
+  dueDate           DateTime? @map("due_date")
+  returnDate        DateTime? @map("return_date")
+
+  borrower Student? @relation(fields: [borrowerStudentId], references: [id], onDelete: SetNull)
+
+  @@map("library_records")
+}
+
+model SportsInventory {
+  id                String   @id @default(uuid())
+  itemCode          String   @unique @map("item_code")
+  itemName          String   @map("item_name")
+  category          String
+  totalQuantity     Int      @default(0) @map("total_quantity")
+  availableQuantity Int      @default(0) @map("available_quantity")
+  damagedQuantity   Int      @default(0) @map("damaged_quantity")
+  condition         String   @default("good") // good | fair | damaged | needs_replacement
+  lastInspected     DateTime @default(now()) @map("last_inspected")
+
+  @@map("sports_inventory")
+}
+
+model NoonMealLog {
+  id                 String   @id @default(uuid())
+  logDate            DateTime @unique @map("log_date")
+  headcountServed    Int      @map("headcount_served")
+  riceUsedKg         Float    @map("rice_used_kg")
+  dalUsedKg          Float    @map("dal_used_kg")
+  vegetablesUsedKg   Float    @map("vegetables_used_kg")
+  oilUsedLiters      Float    @map("oil_used_liters")
+  eggCount           Int      @default(0) @map("egg_count")
+  qualityCheckPassed Boolean  @default(true) @map("quality_check_passed")
+  cookInCharge       String   @default("Mrs. S. Lakshmi") @map("cook_in_charge")
+  notes              String?
+
+  @@map("noon_meal_logs")
+}
+
+model HistoricalWork {
+  id              String   @id @default(uuid())
+  title           String
+  contributorType String   @map("contributor_type")
+  institutionName String   @map("institution_name")
+  year            Int
+  description     String
+  projectUrl      String?  @map("project_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("historical_works")
+}
+
+model VisitorLog {
+  id            String   @id @default(uuid())
+  visitorName   String   @map("visitor_name")
+  organization  String
+  purpose       String
+  contactNumber String   @map("contact_number")
+  visitDate     DateTime @map("visit_date")
+  feedback      String?
+
+  @@map("visitor_logs")
+}
